@@ -1,0 +1,85 @@
+using System;
+using System.Collections.Generic;
+
+class Flow
+{
+    static bool BFS(Dictionary<string, Dictionary<string, int>> graph, string source, string sink, Dictionary<string, string> parent) //Объявление метода BFS для поиска пути в графе.
+    {
+        var visited = new HashSet<string>(); //Создание множества visited для отслеживания посещенных вершин
+        var queue = new Queue<string>(); //Создание очереди для реализации BFS
+        queue.Enqueue(source); //Добавление начальной вершины в очередь
+        visited.Add(source); //посещенные вершины
+
+        while (queue.Count > 0) //Цикл, который продолжается, пока очередь не пуста
+        {
+            string u = queue.Dequeue(); //Извлечение вершины из очереди
+
+
+            foreach (var v in graph[u].Keys) //Перебор смежных вершин текущей вершины u
+            {
+                if (!visited.Contains(v) && graph[u][v] > 0) //Проверка, была ли посещена вершина v и есть ли доступный поток.
+                {
+                    parent[v] = u; //Если v еще не посещена, сохранить предка (u) и добавить v в посещенные
+                    visited.Add(v);
+                    if (v == sink) //Проверка, достигли ли целевой вершины
+                        return true;
+                    queue.Enqueue(v); //Добавление v в очередь для дальнейшего изучения
+                }
+            }
+        }
+
+        return false; //Возвращение false, если путь не найден
+    }
+
+    static int EdmondsKarp(Dictionary<string, Dictionary<string, int>> graph, string source, string sink) //Определение метода EdmondsKarp, реализующего сам алгоритм
+    {
+        int totalFlow = 0; //Инициализация переменной totalFlow
+        var parent = new Dictionary<string, string>(); //Инициализация словаря parent
+
+        while (BFS(graph, source, sink, parent)) //Цикл, продолжающийся до тех пор, пока существует путь от source до sink.
+        {
+            int pathFlow = int.MaxValue; //Инициализация min-значения для потока в пути
+            string s = sink; //Установка текущей вершины s на sink
+
+            while (s != source) //Цикл, чтобы пройти по пути от sink к source
+            {
+                pathFlow = Math.Min(pathFlow, graph[parent[s]][s]); //Обновление минимального потока на основе доступного потока по текущему ребру
+                s = parent[s]; //Переход к предку по текущему пути
+            }
+
+            totalFlow += pathFlow; //Добавление потока к общему поток
+            s = sink; //брос текущей вершины s обратно на sink
+
+            while (s != source) //Цикл для обновления графа по найденному пути
+            {
+                string u = parent[s]; //Получение предка для текущей вершины s
+                graph[u][s] -= pathFlow; //Уменьшение доступного потока на ребре u->s
+                if (!graph.ContainsKey(s)) //Создание вершины s в графе, если её еще нет
+                    graph[s] = new Dictionary<string, int>();
+                if (!graph[s].ContainsKey(u)) //Создание обратного ребра s->u, если его нет
+                    graph[s][u] = 0; 
+                graph[s][u] += pathFlow; //Добавление потока по обратному ребру
+                s = parent[s]; //Переход к предку для продолжения обновления
+            }
+        }
+
+        return totalFlow; //Возврат общего потока
+    }
+
+    static void Main()
+    {
+        var graph = new Dictionary<string, Dictionary<string, int>> //Создание графа представленного в виде словаря словарей
+        {
+            { "s", new Dictionary<string, int> { { "1", 10 }, { "2", 5 } } },
+            { "1", new Dictionary<string, int> { { "t", 5 }, { "2", 15 } } },
+            { "2", new Dictionary<string, int> { { "t", 10 } } },
+            { "t", new Dictionary<string, int>() }
+        };
+
+        string source = "s"; //Инициализация начальной и конечной вершин
+        string sink = "t";
+
+        int maxFlow = EdmondsKarp(graph, source, sink); //Вызов метода EdmondsKarp для нахождения максимального потока
+        Console.WriteLine($"Максимальный поток: {maxFlow}"); //Вывод максимального потока на экран.
+    }
+}
